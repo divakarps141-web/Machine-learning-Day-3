@@ -1,11 +1,18 @@
 
 import streamlit as st
 import pandas as pd
-import joblib
+import numpy as np
 
-# ==========================================================
-# 1. PAGE CONFIG
-# ==========================================================
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+
+
+# =========================================================
+# PAGE CONFIGURATION
+# =========================================================
 
 st.set_page_config(
     page_title="MediPredict | Diabetes ML",
@@ -14,395 +21,270 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ==========================================================
-# 2. CUSTOM CSS - CLEAN & CONSISTENT UI
-# ==========================================================
+
+# =========================================================
+# PROFESSIONAL UI STYLING
+# =========================================================
 
 st.markdown("""
 <style>
 
-/* ---------- GLOBAL ---------- */
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="st-"] {
-    font-family: 'Inter', sans-serif;
+:root {
+    --background: #f5f7fb;
+    --surface: #ffffff;
+    --primary: #0f766e;
+    --primary-light: #e6f5f2;
+    --text: #172b4d;
+    --muted: #64748b;
+    --border: #e2e8f0;
+}
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif !important;
 }
 
 .stApp {
-    background-color: #F5F7FB;
+    background: var(--background);
 }
 
+/* Main content */
 .block-container {
-    max-width: 1350px;
+    max-width: 1250px;
     padding-top: 2rem;
-    padding-bottom: 2rem;
+    padding-bottom: 3rem;
 }
 
-/* Hide Streamlit top decoration */
-[data-testid="stHeader"] {
-    background: transparent;
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: #14263f;
+    border-right: 1px solid #263a54;
 }
 
-/* ---------- SIDEBAR ---------- */
-
-[data-testid="stSidebar"] {
-    background: #14263D;
+section[data-testid="stSidebar"] * {
+    color: #eaf1fa !important;
 }
 
-[data-testid="stSidebar"] * {
-    color: #F8FAFC;
+section[data-testid="stSidebar"] .stRadio label {
+    color: #eaf1fa !important;
 }
 
-[data-testid="stSidebar"] hr {
-    border-color: #344A62;
+/* Main headings */
+h1, h2, h3, h4 {
+    color: #172b4d !important;
+    font-weight: 700 !important;
 }
 
-.sidebar-brand {
-    padding: 10px 5px 20px 5px;
+p, label, span {
+    font-family: 'Inter', sans-serif;
 }
 
-.brand-icon {
-    font-size: 34px;
-    margin-bottom: 10px;
-}
-
-.brand-name {
-    color: #FFFFFF !important;
-    font-size: 27px;
-    font-weight: 800;
-    margin: 0;
-}
-
-.brand-subtitle {
-    color: #B7C9DC !important;
-    font-size: 13px;
-    margin-top: 5px;
-}
-
-.sidebar-heading {
-    color: #9FB4CA !important;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-}
-
-/* Sidebar radio navigation */
-
-[data-testid="stSidebar"] [data-testid="stRadio"] label {
-    color: #E8F0F8 !important;
-}
-
-[data-testid="stSidebar"] [data-testid="stRadio"] p {
-    color: #E8F0F8 !important;
-}
-
-/* ---------- HERO ---------- */
-
+/* Hero */
 .hero {
-    background: linear-gradient(120deg, #14263D 0%, #15536A 55%, #0D9488 100%);
-    padding: 36px 38px;
+    background: linear-gradient(120deg, #14304d 0%, #0f766e 100%);
+    padding: 36px 40px;
     border-radius: 22px;
-    margin-bottom: 24px;
-}
-
-.hero-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 30px;
-    background: rgba(255,255,255,0.12);
-    color: #D8FFFA !important;
-    border: 1px solid rgba(255,255,255,0.18);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    margin-bottom: 26px;
+    border: 1px solid rgba(255,255,255,0.10);
 }
 
 .hero-title {
-    color: #FFFFFF !important;
+    color: #ffffff !important;
     font-size: 34px;
     font-weight: 800;
-    margin-top: 17px;
-    margin-bottom: 10px;
-    line-height: 1.3;
+    margin: 0 0 10px 0;
+    letter-spacing: -1px;
 }
 
-.hero-description {
-    color: #E0F2FE !important;
-    font-size: 14px;
+.hero-subtitle {
+    color: #d9f0ec !important;
+    font-size: 15px;
     line-height: 1.7;
     margin: 0;
 }
 
-/* ---------- SECTION TITLES ---------- */
-
-.section-title {
-    color: #14263D !important;
-    font-size: 21px;
-    font-weight: 750;
-    margin-bottom: 5px;
-}
-
-.section-description {
-    color: #64748B !important;
-    font-size: 13px;
-    line-height: 1.6;
-    margin-bottom: 18px;
-}
-
-/* ---------- SUMMARY CARDS ---------- */
-
-.summary-card {
-    background: #FFFFFF;
-    border: 1px solid #E4EAF2;
+/* Metric cards */
+.metric-card {
+    background: #ffffff;
+    border: 1px solid #e3eaf2;
     border-radius: 16px;
-    padding: 20px;
-    min-height: 115px;
-    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.025);
+    padding: 22px 24px;
+    min-height: 120px;
+    box-shadow: 0 3px 12px rgba(20, 38, 63, 0.03);
 }
 
-.summary-label {
-    color: #64748B !important;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.7px;
-    text-transform: uppercase;
+.metric-label {
+    color: #64748b !important;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
 }
 
-.summary-value {
-    color: #14263D !important;
-    font-size: 21px;
+.metric-value {
+    color: #172b4d !important;
+    font-size: 27px;
     font-weight: 750;
+    line-height: 1.3;
+}
+
+.metric-description {
+    color: #64748b !important;
+    font-size: 12px;
+    margin-top: 7px;
+}
+
+/* Section headings */
+.section-heading {
+    color: #172b4d !important;
+    font-size: 21px;
+    font-weight: 700;
     margin-top: 12px;
+    margin-bottom: 6px;
 }
 
-/* ---------- FORM CONTAINER ---------- */
+.section-caption {
+    color: #64748b !important;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
 
-.form-box {
-    background: #FFFFFF;
-    border: 1px solid #E4EAF2;
+/* Form container */
+.form-card {
+    background: #ffffff;
+    border: 1px solid #e3eaf2;
     border-radius: 18px;
-    padding: 22px 24px 10px 24px;
-    box-shadow: 0 3px 14px rgba(15,23,42,0.025);
+    padding: 25px;
+    box-shadow: 0 4px 16px rgba(20, 38, 63, 0.03);
 }
 
-/* ---------- INPUT LABELS ---------- */
-
-[data-testid="stWidgetLabel"] p,
-[data-testid="stWidgetLabel"] label,
-.stNumberInput label {
+/* Input labels */
+div[data-testid="stWidgetLabel"] p {
     color: #334155 !important;
-    font-size: 13px !important;
     font-weight: 600 !important;
+    font-size: 13px !important;
 }
 
-/* ---------- INPUT BOXES ---------- */
-
-[data-testid="stNumberInput"] input {
-    color: #14263D !important;
-    -webkit-text-fill-color: #14263D !important;
-    background-color: #FFFFFF !important;
-    font-weight: 500 !important;
-}
-
-[data-testid="stNumberInput"] div[data-baseweb="input"] {
-    background-color: #FFFFFF !important;
-    border: 1px solid #D7E0EA !important;
+/* Inputs */
+div[data-baseweb="input"] {
+    background: #ffffff !important;
     border-radius: 10px !important;
 }
 
-[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
-    border-color: #0D9488 !important;
-    box-shadow: 0 0 0 2px rgba(13,148,136,0.10) !important;
+div[data-baseweb="input"] input {
+    color: #172b4d !important;
+    background: #ffffff !important;
 }
 
-[data-testid="stNumberInput"] button {
-    background: #F8FAFC !important;
+/* Number input buttons */
+button[data-testid="stNumberInputStepUp"],
+button[data-testid="stNumberInputStepDown"] {
+    color: #334155 !important;
 }
 
-[data-testid="stNumberInput"] button svg {
-    fill: #475569 !important;
-}
-
-/* ---------- SUBMIT BUTTON ---------- */
-
-[data-testid="stFormSubmitButton"] button {
-    width: 100%;
-    height: 48px;
-    background: #0D9488 !important;
-    color: #FFFFFF !important;
-    border: 0 !important;
-    border-radius: 11px !important;
+/* Primary buttons */
+.stButton button[kind="primary"],
+.stFormSubmitButton button[kind="primary"] {
+    background: #0f766e !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    min-height: 48px;
     font-weight: 700 !important;
     transition: 0.2s ease;
 }
 
-[data-testid="stFormSubmitButton"] button:hover {
-    background: #0F766E !important;
-    border: 0 !important;
-    box-shadow: 0 5px 15px rgba(13,148,136,0.15);
+.stButton button[kind="primary"]:hover,
+.stFormSubmitButton button[kind="primary"]:hover {
+    background: #115e59 !important;
+    border: none !important;
 }
 
-[data-testid="stFormSubmitButton"] button p {
-    color: #FFFFFF !important;
+/* Secondary buttons */
+.stButton button {
+    border-radius: 10px !important;
 }
 
-/* ---------- RESULT CONTAINERS ---------- */
-
-.result-box {
-    border-radius: 17px;
-    padding: 23px;
-    border: 1px solid #E2E8F0;
-    background: #FFFFFF;
-    min-height: 180px;
-}
-
-.result-class-zero {
-    background: #F0FDFA;
-    border: 1px solid #99F6E4;
-}
-
-.result-class-one {
-    background: #FFF7ED;
-    border: 1px solid #FED7AA;
-}
-
-.result-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.7px;
-    color: #64748B !important;
-}
-
-.result-heading {
-    font-size: 23px;
-    font-weight: 800;
+/* Result panel */
+.result-card {
+    background: #ffffff;
+    border: 1px solid #e3eaf2;
+    border-radius: 18px;
+    padding: 28px;
     margin-top: 12px;
-    margin-bottom: 10px;
 }
 
-.result-text {
-    font-size: 13px;
+.result-safe {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.result-warning {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.result-title {
+    color: #172b4d !important;
+    font-size: 23px;
+    font-weight: 750;
+    margin-bottom: 8px;
+}
+
+.result-description {
     color: #475569 !important;
+    font-size: 14px;
     line-height: 1.7;
 }
 
-/* ---------- METRICS ---------- */
-
-[data-testid="stMetric"] {
-    background: #FFFFFF;
-    border: 1px solid #E4EAF2;
-    border-radius: 14px;
-    padding: 17px 18px;
+/* Disclaimer */
+.disclaimer {
+    background: #eef2f8;
+    border: 1px solid #dce5ef;
+    padding: 16px 20px;
+    border-radius: 12px;
+    color: #334155 !important;
+    font-size: 13px;
+    line-height: 1.7;
 }
 
-[data-testid="stMetricLabel"] {
-    color: #64748B !important;
-}
-
-[data-testid="stMetricLabel"] p {
-    color: #64748B !important;
-}
-
-[data-testid="stMetricValue"] {
-    color: #14263D !important;
-}
-
-[data-testid="stMetricValue"] div {
-    color: #14263D !important;
-}
-
-/* ---------- EXPANDER ---------- */
-
-[data-testid="stExpander"] {
-    background: #FFFFFF !important;
-    border: 1px solid #E2E8F0 !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-
-[data-testid="stExpander"] summary {
-    padding: 14px 18px !important;
-    background: #FFFFFF !important;
-    color: #14263D !important;
-    min-height: 52px !important;
-}
-
-[data-testid="stExpander"] summary p {
-    color: #14263D !important;
-    font-weight: 650 !important;
-    font-size: 14px !important;
-    margin: 0 !important;
-}
-
-[data-testid="stExpander"] summary svg {
-    color: #0D9488 !important;
-    flex-shrink: 0 !important;
-}
-
-[data-testid="stExpander"] details {
-    background: #FFFFFF !important;
-}
-
-[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
-    background: #FFFFFF !important;
-    border-top: 1px solid #E5EAF0 !important;
-    padding: 15px !important;
-}
-
-/* ---------- DATAFRAME ---------- */
-
-[data-testid="stDataFrame"] {
-    border: 1px solid #E2E8F0;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-/* ---------- ALERTS ---------- */
-
-[data-testid="stAlert"] {
-    border-radius: 12px !important;
-}
-
-[data-testid="stAlert"] p {
-    line-height: 1.65 !important;
-}
-
-/* ---------- FOOTER ---------- */
-
+/* Footer */
 .footer {
     text-align: center;
-    color: #94A3B8 !important;
-    font-size: 11px;
-    line-height: 1.8;
-    padding-top: 25px;
+    color: #94a3b8 !important;
+    font-size: 12px;
+    padding: 24px 0 8px 0;
 }
 
-/* ---------- RESPONSIVE ---------- */
+/* Hide Streamlit menu/footer */
+#MainMenu {
+    visibility: hidden;
+}
 
+footer {
+    visibility: hidden;
+}
+
+/* Mobile responsive */
 @media (max-width: 768px) {
-
     .block-container {
-        padding-left: 1rem;
-        padding-right: 1rem;
-        padding-top: 1rem;
+        padding: 1rem;
     }
 
     .hero {
         padding: 24px;
-        border-radius: 17px;
     }
 
     .hero-title {
         font-size: 26px;
     }
 
-    .summary-value {
-        font-size: 18px;
-    }
-
-    .form-box {
-        padding: 15px;
+    .metric-card {
+        margin-bottom: 10px;
     }
 }
 
@@ -410,579 +292,661 @@ html, body, [class*="st-"] {
 """, unsafe_allow_html=True)
 
 
-# ==========================================================
-# 3. LOAD MODEL
-# ==========================================================
+# =========================================================
+# DATASET CONFIGURATION
+# =========================================================
+
+DATASET_COLUMNS = [
+    "Pregnancies",
+    "Glucose",
+    "BloodPressure",
+    "SkinThickness",
+    "Insulin",
+    "BMI",
+    "DiabetesPedigreeFunction",
+    "Age",
+    "Outcome"
+]
+
+FEATURES = DATASET_COLUMNS[:-1]
+TARGET = "Outcome"
+
+INVALID_ZERO_COLUMNS = [
+    "Glucose",
+    "BloodPressure",
+    "SkinThickness",
+    "Insulin",
+    "BMI"
+]
+
+
+# =========================================================
+# LOAD DATASET
+# =========================================================
+
+@st.cache_data
+def load_dataset(file):
+
+    df = pd.read_csv(file)
+
+    # Handle datasets without column headers
+    if len(df.columns) == 9 and not set(DATASET_COLUMNS).issubset(df.columns):
+        df.columns = DATASET_COLUMNS
+
+    # Validate required columns
+    missing_columns = [
+        column for column in DATASET_COLUMNS
+        if column not in df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            "Missing columns: " + ", ".join(missing_columns)
+        )
+
+    df = df[DATASET_COLUMNS].copy()
+
+    # Convert columns to numeric
+    for column in DATASET_COLUMNS:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+
+    # Replace medically invalid zeros with missing values
+    for column in INVALID_ZERO_COLUMNS:
+        df[column] = df[column].replace(0, np.nan)
+
+    # Remove rows with missing target
+    df = df.dropna(subset=[TARGET])
+
+    # Validate target classes
+    df = df[df[TARGET].isin([0, 1])]
+
+    return df
+
+
+# =========================================================
+# TRAIN MODEL
+# =========================================================
 
 @st.cache_resource
-def load_model():
+def train_model(df):
 
-    model = joblib.load("diabetes_model.pkl")
+    X = df[FEATURES]
+    y = df[TARGET].astype(int)
 
-    return model
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.20,
+        random_state=42,
+        stratify=y
+    )
+
+    model = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("classifier", DecisionTreeClassifier(
+            max_depth=4,
+            class_weight="balanced",
+            random_state=42
+        ))
+    ])
+
+    model.fit(X_train, y_train)
+
+    predictions = model.predict(X_test)
+
+    accuracy = accuracy_score(y_test, predictions)
+
+    return model, accuracy, len(X_train), len(X_test)
 
 
-try:
-    model = load_model()
-    model_loaded = True
-
-except Exception as error:
-    model = None
-    model_loaded = False
-
-
-# ==========================================================
-# 4. SIDEBAR
-# ==========================================================
+# =========================================================
+# SIDEBAR
+# =========================================================
 
 with st.sidebar:
 
     st.markdown("""
-    <div class="sidebar-brand">
-        <div class="brand-icon">🩺</div>
-        <p class="brand-name">MediPredict</p>
-        <p class="brand-subtitle">Machine Learning Health Analytics</p>
+    <div style="padding:15px 5px 25px 5px;">
+        <div style="font-size:38px;">🩺</div>
+        <h2 style="color:#ffffff !important; margin:8px 0;">
+            MediPredict
+        </h2>
+        <p style="color:#b9c9dc !important; font-size:14px;">
+            Machine Learning Health Analytics
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
 
-    st.markdown(
-        '<p class="sidebar-heading">NAVIGATION</p>',
-        unsafe_allow_html=True
-    )
-
     page = st.radio(
-        "Navigation",
+        "NAVIGATION",
         ["Dashboard", "About Project"],
-        label_visibility="collapsed"
+        index=0
     )
 
     st.divider()
 
-    st.markdown(
-        '<p class="sidebar-heading">MODEL INFORMATION</p>',
-        unsafe_allow_html=True
-    )
+    st.markdown("### MODEL INFORMATION")
+
+    st.markdown("**Algorithm**")
+    st.caption("Decision Tree Classifier")
+
+    st.markdown("**Prediction Type**")
+    st.caption("Binary Classification")
+
+    st.markdown("**Input Features**")
+    st.caption("8 Parameters")
+
+    st.markdown("**Dataset**")
+    st.caption("Pima Indians Diabetes Dataset")
+
+    st.divider()
 
     st.markdown("""
-    **Algorithm**
-
-    Decision Tree Classifier
-
-    **Prediction Type**
-
-    Binary Classification
-
-    **Input Parameters**
-
-    8 Features
-    """)
-
-    st.divider()
-
-    if model_loaded:
-        st.success("Model loaded successfully")
-    else:
-        st.error("Model file not found")
-
-    st.caption("Educational ML Project")
+    <div style="font-size:12px; color:#b9c9dc;">
+        Student Machine Learning Project<br>
+        Educational Demonstration
+    </div>
+    """, unsafe_allow_html=True)
 
 
-# ==========================================================
-# 5. HERO HEADER
-# ==========================================================
+# =========================================================
+# DATASET SOURCE
+# =========================================================
 
-st.markdown("""
-<div class="hero">
+dataset_file = None
 
-    <span class="hero-badge">
-        MACHINE LEARNING PROJECT
-    </span>
-
-    <h1 class="hero-title">
-        Diabetes Prediction Dashboard
-    </h1>
-
-    <p class="hero-description">
-        A clean interactive interface for exploring a Decision Tree
-        classification model using eight input parameters.
-    </p>
-
-</div>
-""", unsafe_allow_html=True)
+try:
+    dataset_file = open("diabetes.csv", "rb")
+except FileNotFoundError:
+    dataset_file = None
 
 
-# ==========================================================
-# 6. DASHBOARD PAGE
-# ==========================================================
+if dataset_file is None:
+
+    with st.sidebar:
+        st.markdown("### Dataset")
+
+        uploaded_file = st.file_uploader(
+            "Upload diabetes.csv",
+            type=["csv"]
+        )
+
+    if uploaded_file is not None:
+        dataset_file = uploaded_file
+
+
+# =========================================================
+# CHECK DATASET
+# =========================================================
+
+if dataset_file is None:
+
+    st.markdown("""
+    <div class="hero">
+        <h1 class="hero-title">MediPredict</h1>
+        <p class="hero-subtitle">
+            Machine Learning Diabetes Prediction Dashboard
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.warning(
+        "Dataset not found. Place diabetes.csv in the same folder "
+        "as app.py or upload it using the sidebar."
+    )
+
+    st.info(
+        "For GitHub deployment, upload both app.py and diabetes.csv "
+        "to your repository."
+    )
+
+    st.stop()
+
+
+# =========================================================
+# PROCESS DATA AND TRAIN MODEL
+# =========================================================
+
+try:
+
+    diabetes = load_dataset(dataset_file)
+
+    model, model_accuracy, train_rows, test_rows = train_model(diabetes)
+
+except Exception as error:
+
+    st.error(f"Dataset error: {error}")
+    st.stop()
+
+
+# =========================================================
+# DASHBOARD PAGE
+# =========================================================
 
 if page == "Dashboard":
 
-    # ---------- SUMMARY CARDS ----------
-
-    card1, card2, card3 = st.columns(3, gap="medium")
-
-    with card1:
-        st.markdown("""
-        <div class="summary-card">
-            <div class="summary-label">MODEL ALGORITHM</div>
-            <div class="summary-value">Decision Tree</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with card2:
-        st.markdown("""
-        <div class="summary-card">
-            <div class="summary-label">INPUT FEATURES</div>
-            <div class="summary-value">8 Parameters</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with card3:
-        st.markdown("""
-        <div class="summary-card">
-            <div class="summary-label">OUTPUT TYPE</div>
-            <div class="summary-value">Binary Classification</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.write("")
-
-    # ---------- INPUT SECTION ----------
-
-    st.markdown(
-        '<div class="section-title">Input Parameters</div>',
-        unsafe_allow_html=True
-    )
-
+    # Hero section
     st.markdown("""
-    <div class="section-description">
-        Enter the values below to explore the trained model's output.
+    <div class="hero">
+        <h1 class="hero-title">Diabetes Prediction Dashboard</h1>
+        <p class="hero-subtitle">
+            Machine learning classification demonstration using
+            a Decision Tree model. Enter patient parameters to
+            explore the model's prediction.
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
-    if model_loaded:
 
-        with st.form("diabetes_prediction_form"):
+    # =====================================================
+    # METRIC CARDS
+    # =====================================================
 
-            # Two equal columns
-            left_column, right_column = st.columns(
-                2,
-                gap="large"
-            )
+    metric1, metric2, metric3, metric4 = st.columns(4)
 
-            # ---------- LEFT COLUMN ----------
+    with metric1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">MODEL</div>
+            <div class="metric-value">Decision Tree</div>
+            <div class="metric-description">Classification algorithm</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            with left_column:
+    with metric2:
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-label">INPUT FEATURES</div>
+            <div class="metric-value">08</div>
+            <div class="metric-description">Predictor parameters</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-                st.markdown("#### General Parameters")
+    with metric3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">DATASET SIZE</div>
+            <div class="metric-value">{len(diabetes):,}</div>
+            <div class="metric-description">Records used</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-                pregnancies = st.number_input(
-                    "Pregnancies",
-                    min_value=0,
-                    max_value=20,
-                    value=0,
-                    step=1
-                )
+    with metric4:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">TEST ACCURACY</div>
+            <div class="metric-value">{model_accuracy:.1%}</div>
+            <div class="metric-description">Held-out test data</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-                glucose = st.number_input(
-                    "Glucose",
-                    min_value=0.0,
-                    max_value=300.0,
-                    value=120.0,
-                    step=1.0
-                )
 
-                blood_pressure = st.number_input(
-                    "Blood Pressure",
-                    min_value=0.0,
-                    max_value=200.0,
-                    value=80.0,
-                    step=1.0
-                )
+    st.write("")
 
-                skin_thickness = st.number_input(
-                    "Skin Thickness",
-                    min_value=0.0,
-                    max_value=100.0,
-                    value=20.0,
-                    step=1.0
-                )
+    st.markdown(
+        '<div class="section-heading">Patient Parameters</div>',
+        unsafe_allow_html=True
+    )
 
-            # ---------- RIGHT COLUMN ----------
+    st.markdown(
+        '<div class="section-caption">'
+        'Enter the values below to generate a model prediction.'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
-            with right_column:
 
-                st.markdown("#### Additional Parameters")
+    # =====================================================
+    # INPUT FORM
+    # =====================================================
 
-                insulin = st.number_input(
-                    "Insulin",
-                    min_value=0.0,
-                    max_value=1000.0,
-                    value=80.0,
-                    step=1.0
-                )
+    with st.form("diabetes_prediction_form"):
 
-                bmi = st.number_input(
-                    "BMI",
-                    min_value=0.0,
-                    max_value=100.0,
-                    value=25.0,
-                    step=0.1
-                )
+        st.markdown("### General Parameters")
 
-                diabetes_pedigree = st.number_input(
-                    "Diabetes Pedigree Function",
-                    min_value=0.0,
-                    max_value=3.0,
-                    value=0.50,
-                    step=0.01,
-                    format="%.2f"
-                )
+        col1, col2 = st.columns(2, gap="large")
 
-                age = st.number_input(
-                    "Age",
-                    min_value=1,
-                    max_value=120,
-                    value=25,
-                    step=1
-                )
+        with col1:
 
-            st.write("")
-
-            submit = st.form_submit_button(
-                "Generate Prediction",
-                use_container_width=True
-            )
-
-        # ==================================================
-        # 7. PREDICTION RESULT
-        # ==================================================
-
-        if submit:
-
-            # Maintain the exact feature order used during training
-            feature_names = [
+            pregnancies = st.number_input(
                 "Pregnancies",
-                "Glucose",
-                "BloodPressure",
-                "SkinThickness",
-                "Insulin",
-                "BMI",
-                "DiabetesPedigreeFunction",
-                "Age"
-            ]
-
-            input_data = pd.DataFrame(
-                [[
-                    pregnancies,
-                    glucose,
-                    blood_pressure,
-                    skin_thickness,
-                    insulin,
-                    bmi,
-                    diabetes_pedigree,
-                    age
-                ]],
-                columns=feature_names
+                min_value=0,
+                max_value=20,
+                value=0,
+                step=1,
+                help="Number of pregnancies"
             )
 
-            try:
+            glucose = st.number_input(
+                "Glucose",
+                min_value=1.0,
+                max_value=300.0,
+                value=120.0,
+                step=1.0,
+                help="Glucose concentration"
+            )
 
-                prediction = model.predict(input_data)[0]
+            blood_pressure = st.number_input(
+                "Blood Pressure",
+                min_value=1.0,
+                max_value=200.0,
+                value=80.0,
+                step=1.0,
+                help="Diastolic blood pressure"
+            )
 
-                # Safely handle model probability support
-                probability_available = hasattr(model, "predict_proba")
+            skin_thickness = st.number_input(
+                "Skin Thickness",
+                min_value=1.0,
+                max_value=100.0,
+                value=20.0,
+                step=1.0,
+                help="Triceps skin fold thickness"
+            )
 
-                if probability_available:
+        with col2:
 
-                    probability_values = model.predict_proba(input_data)[0]
+            insulin = st.number_input(
+                "Insulin",
+                min_value=1.0,
+                max_value=1000.0,
+                value=120.0,
+                step=1.0,
+                help="2-hour serum insulin"
+            )
 
-                    model_classes = list(model.classes_)
+            bmi = st.number_input(
+                "BMI",
+                min_value=1.0,
+                max_value=80.0,
+                value=25.0,
+                step=0.1,
+                help="Body mass index"
+            )
 
-                    probability_map = {
-                        model_classes[i]: float(probability_values[i])
-                        for i in range(len(model_classes))
-                    }
+            dpf = st.number_input(
+                "Diabetes Pedigree Function",
+                min_value=0.0,
+                max_value=3.0,
+                value=0.5,
+                step=0.01,
+                help="Diabetes pedigree function"
+            )
 
-                    probability_0 = probability_map.get(0, 0.0)
-                    probability_1 = probability_map.get(1, 0.0)
+            age = st.number_input(
+                "Age",
+                min_value=1,
+                max_value=120,
+                value=25,
+                step=1,
+                help="Age in years"
+            )
 
-                else:
 
-                    probability_0 = None
-                    probability_1 = None
+        st.write("")
 
-                st.write("")
+        submitted = st.form_submit_button(
+            "Generate Prediction",
+            type="primary",
+            use_container_width=True
+        )
 
-                st.markdown(
-                    '<div class="section-title">Prediction Results</div>',
-                    unsafe_allow_html=True
-                )
 
-                st.markdown("""
-                <div class="section-description">
-                    Results generated by the trained classification model.
+    # =====================================================
+    # PREDICTION
+    # =====================================================
+
+    if submitted:
+
+        input_data = pd.DataFrame([{
+            "Pregnancies": pregnancies,
+            "Glucose": glucose,
+            "BloodPressure": blood_pressure,
+            "SkinThickness": skin_thickness,
+            "Insulin": insulin,
+            "BMI": bmi,
+            "DiabetesPedigreeFunction": dpf,
+            "Age": age
+        }])
+
+        prediction = int(model.predict(input_data)[0])
+
+        probabilities = model.predict_proba(input_data)[0]
+
+        class_0_probability = float(probabilities[0]) * 100
+        class_1_probability = float(probabilities[1]) * 100
+
+
+        st.write("")
+
+        st.markdown(
+            '<div class="section-heading">Prediction Results</div>',
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            '<div class="section-caption">'
+            'Output generated from the trained machine learning model.'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+
+        # Prediction result
+        if prediction == 0:
+
+            st.markdown("""
+            <div class="result-safe">
+                <div class="result-title">
+                    Model Output: Class 0
                 </div>
-                """, unsafe_allow_html=True)
+                <div class="result-description">
+                    The model classified the supplied parameters
+                    into Class 0.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-                # ---------- PREDICTION CARD ----------
+        else:
 
-                result_col, probability_col = st.columns(
-                    [1.15, 1],
-                    gap="large"
-                )
-
-                with result_col:
-
-                    if prediction == 0:
-
-                        st.markdown("""
-                        <div class="result-box result-class-zero">
-
-                            <div class="result-label">
-                                MODEL CLASSIFICATION
-                            </div>
-
-                            <div class="result-heading"
-                            style="color:#0F766E !important;">
-                                Class 0
-                            </div>
-
-                            <div class="result-text">
-                                The model predicted Class 0 for the
-                                supplied input parameters.
-                            </div>
-
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                    else:
-
-                        st.markdown("""
-                        <div class="result-box result-class-one">
-
-                            <div class="result-label">
-                                MODEL CLASSIFICATION
-                            </div>
-
-                            <div class="result-heading"
-                            style="color:#C2410C !important;">
-                                Class 1
-                            </div>
-
-                            <div class="result-text">
-                                The model predicted Class 1 for the
-                                supplied input parameters.
-                            </div>
-
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                # ---------- PROBABILITY CARD ----------
-
-                with probability_col:
-
-                    if probability_available:
-
-                        st.metric(
-                            "Class 1 Probability",
-                            f"{probability_1 * 100:.2f}%"
-                        )
-
-                        st.progress(
-                            min(max(probability_1, 0.0), 1.0)
-                        )
-
-                        st.caption(
-                            "Model output probability for Class 1."
-                        )
-
-                    else:
-
-                        st.warning(
-                            "Probability output is unavailable "
-                            "for this model."
-                        )
-
-                # ---------- PROBABILITY BREAKDOWN ----------
-
-                if probability_available:
-
-                    st.write("")
-
-                    prob_col1, prob_col2 = st.columns(2)
-
-                    with prob_col1:
-
-                        st.metric(
-                            "Class 0 Probability",
-                            f"{probability_0 * 100:.2f}%"
-                        )
-
-                    with prob_col2:
-
-                        st.metric(
-                            "Class 1 Probability",
-                            f"{probability_1 * 100:.2f}%"
-                        )
-
-                # ---------- INPUT SUMMARY ----------
-
-                with st.expander(
-                    "View Input Parameters",
-                    expanded=False
-                ):
-
-                    st.dataframe(
-                        input_data,
-                        use_container_width=True,
-                        hide_index=True
-                    )
-
-                # ---------- DISCLAIMER ----------
-
-                st.info(
-                    "Educational machine learning demonstration only. "
-                    "This model is not a medical diagnostic tool. "
-                    "Predictions should not be used for medical decisions."
-                )
-
-            except Exception as error:
-
-                st.error(
-                    "Prediction error. Please verify your model "
-                    "and input feature configuration."
-                )
-
-                st.exception(error)
+            st.markdown("""
+            <div class="result-warning">
+                <div class="result-title">
+                    Model Output: Class 1
+                </div>
+                <div class="result-description">
+                    The model classified the supplied parameters
+                    into Class 1.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 
-# ==========================================================
-# 8. ABOUT PROJECT PAGE
-# ==========================================================
+        st.write("")
+
+        # Probability cards
+        probability_col1, probability_col2 = st.columns(2, gap="large")
+
+        with probability_col1:
+
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">CLASS 0 PROBABILITY</div>
+                <div class="metric-value">{class_0_probability:.2f}%</div>
+                <div class="metric-description">
+                    Model probability for Class 0
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with probability_col2:
+
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">CLASS 1 PROBABILITY</div>
+                <div class="metric-value">{class_1_probability:.2f}%</div>
+                <div class="metric-description">
+                    Model probability for Class 1
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+
+        # Probability visualization
+        st.write("")
+
+        st.markdown("### Prediction Probability")
+
+        st.progress(
+            int(round(class_1_probability)),
+            text=f"Class 1: {class_1_probability:.2f}%"
+        )
+
+        st.caption(
+            "These values represent the Decision Tree model's "
+            "probability estimates, not actual medical risk."
+        )
+
+
+        # Input summary
+        with st.expander("View Input Parameters"):
+
+            st.dataframe(
+                input_data,
+                use_container_width=True,
+                hide_index=True
+            )
+
+
+        st.markdown("""
+        <div class="disclaimer">
+            <strong>Educational Disclaimer:</strong>
+            This application is an academic machine learning
+            demonstration. It is not a medical diagnostic tool.
+            Its predictions and probability estimates should not
+            be used to diagnose diabetes or make medical decisions.
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# =========================================================
+# ABOUT PROJECT PAGE
+# =========================================================
 
 elif page == "About Project":
 
-    st.markdown(
-        '<div class="section-title">About MediPredict</div>',
-        unsafe_allow_html=True
-    )
-
     st.markdown("""
-    <div class="section-description">
-        An educational Machine Learning project demonstrating
-        binary classification using a Decision Tree algorithm.
+    <div class="hero">
+        <h1 class="hero-title">About MediPredict</h1>
+        <p class="hero-subtitle">
+            A student machine learning project demonstrating
+            binary classification using a Decision Tree.
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="summary-card">
 
-        <div class="summary-label">PROJECT OVERVIEW</div>
+    st.markdown("## Project Overview")
 
-        <div class="result-text" style="margin-top:15px;">
-            MediPredict is a machine learning demonstration application
-            that accepts eight numerical input features and generates
-            a classification result from a trained Decision Tree model.
-            The interface is developed using Streamlit.
-        </div>
+    st.write("""
+    MediPredict is a machine learning demonstration that
+    uses selected health-related input parameters to classify
+    a dataset record into one of two output classes.
 
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.write("")
-
-    st.markdown(
-        '<div class="section-title">Project Workflow</div>',
-        unsafe_allow_html=True
-    )
-
-    workflow = [
-        "Load the diabetes dataset",
-        "Inspect and clean the data",
-        "Handle missing values",
-        "Split the dataset into training and testing sets",
-        "Train the Decision Tree classifier",
-        "Evaluate model performance",
-        "Build the Streamlit web interface",
-        "Generate predictions from user inputs"
-    ]
-
-    for i, step in enumerate(workflow, start=1):
-
-        st.markdown(f"**{i}.** {step}")
-
-    st.write("")
-
-    st.markdown(
-        '<div class="section-title">Technology Stack</div>',
-        unsafe_allow_html=True
-    )
-
-    tech1, tech2, tech3 = st.columns(3)
-
-    with tech1:
-
-        st.markdown("""
-        <div class="summary-card">
-            <div class="summary-value">Python</div>
-            <div class="summary-label">Programming</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with tech2:
-
-        st.markdown("""
-        <div class="summary-card">
-            <div class="summary-value">Scikit-learn</div>
-            <div class="summary-label">Machine Learning</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with tech3:
-
-        st.markdown("""
-        <div class="summary-card">
-            <div class="summary-value">Streamlit</div>
-            <div class="summary-label">Web Application</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.write("")
-
-    st.markdown(
-        '<div class="section-title">Model Information</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown("""
-    - **Algorithm:** Decision Tree Classifier
-    - **Problem Type:** Binary Classification
-    - **Input:** 8 numerical features
-    - **Output:** Class 0 or Class 1
-    - **Dataset:** Diabetes dataset
+    The model is trained using the Diabetes dataset and
+    demonstrates a complete machine learning workflow:
+    dataset preprocessing, missing-value handling,
+    training, testing, and prediction.
     """)
 
-    st.warning(
-        "This project is designed for learning and demonstration. "
-        "It is not clinically validated."
+
+    st.markdown("## Machine Learning Workflow")
+
+    workflow_col1, workflow_col2 = st.columns(2, gap="large")
+
+    with workflow_col1:
+
+        st.markdown("""
+        ### Data Processing
+
+        - Dataset loading
+        - Numerical data validation
+        - Invalid zero-value handling
+        - Missing-value imputation
+        - Feature and target separation
+        - Stratified train-test split
+        """)
+
+    with workflow_col2:
+
+        st.markdown("""
+        ### Model Development
+
+        - Decision Tree Classifier
+        - Maximum depth: 4
+        - Balanced class weights
+        - Training and testing
+        - Classification prediction
+        - Probability output
+        """)
+
+
+    st.markdown("## Model Performance")
+
+    performance_col1, performance_col2, performance_col3 = st.columns(3)
+
+    with performance_col1:
+
+        st.metric(
+            "Test Accuracy",
+            f"{model_accuracy:.2%}"
+        )
+
+    with performance_col2:
+
+        st.metric(
+            "Training Records",
+            f"{train_rows:,}"
+        )
+
+    with performance_col3:
+
+        st.metric(
+            "Testing Records",
+            f"{test_rows:,}"
+        )
+
+
+    st.markdown("## Dataset Overview")
+
+    st.dataframe(
+        diabetes.head(10),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.caption(
+        "Showing the first 10 records after preprocessing."
     )
 
 
-# ==========================================================
-# 9. FOOTER
-# ==========================================================
+    st.markdown("""
+    <div class="disclaimer">
+        This project is created for educational and academic
+        demonstration purposes only. It is not intended for
+        real-world medical diagnosis.
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# =========================================================
+# FOOTER
+# =========================================================
 
 st.markdown("""
 <div class="footer">
-
-    MEDIPREDICT · MACHINE LEARNING PROJECT
-
-    <br>
-
-    EDUCATIONAL DEMONSTRATION · NOT FOR MEDICAL USE
-
+    MEDIPREDICT · MACHINE LEARNING PROJECT · EDUCATIONAL USE ONLY
 </div>
 """, unsafe_allow_html=True)
