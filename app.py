@@ -713,3 +713,43 @@ st.markdown("""
     Educational Demonstration · Not a Medical Diagnostic Tool
 </div>
 """, unsafe_allow_html=True)
+
+# =========================================================
+# MODEL LOADING — DEBUG & FIX
+# =========================================================
+
+import pickle
+from pathlib import Path
+import streamlit as st
+
+MODEL_PATH = Path(__file__).resolve().parent / "diabetes_model.pkl"
+
+@st.cache_resource
+def load_model():
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"Model file not found: {MODEL_PATH}"
+        )
+
+    with open(MODEL_PATH, "rb") as file:
+        loaded_model = pickle.load(file)
+
+    return loaded_model
+
+try:
+    model = load_model()
+    model_loaded = True
+
+except Exception as error:
+    model_loaded = False
+    model = None
+
+    st.error("Model loading failed!")
+
+    st.code(
+        f"Error Type: {type(error).__name__}\n"
+        f"Error Details: {error}\n\n"
+        f"Expected model location:\n{MODEL_PATH}"
+    )
+
+    st.stop()
