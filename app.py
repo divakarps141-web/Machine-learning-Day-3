@@ -3,588 +3,580 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# ============================================================
-# PAGE CONFIGURATION
-# ============================================================
+# ==========================================================
+# 1. PAGE CONFIG
+# ==========================================================
 
 st.set_page_config(
-    page_title="MediPredict AI",
+    page_title="MediPredict | Diabetes ML",
     page_icon="🩺",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ============================================================
-# ADVANCED UI / UX CSS
-# ============================================================
+# ==========================================================
+# 2. CUSTOM CSS - CLEAN & CONSISTENT UI
+# ==========================================================
 
 st.markdown("""
 <style>
+
+/* ---------- GLOBAL ---------- */
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-:root {
-    --navy: #12243A;
-    --teal: #0D9488;
-    --teal-dark: #0F766E;
-    --background: #F4F7FB;
-    --white: #FFFFFF;
-    --text: #172B4D;
-    --muted: #64748B;
-}
-
 html, body, [class*="st-"] {
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'Inter', sans-serif;
 }
 
 .stApp {
-    background: #F4F7FB !important;
-    color: #12243A !important;
+    background-color: #F5F7FB;
 }
 
 .block-container {
-    max-width: 1450px;
+    max-width: 1350px;
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
 
-/* ================= SIDEBAR ================= */
-
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #12243A 0%, #183C55 100%) !important;
+/* Hide Streamlit top decoration */
+[data-testid="stHeader"] {
+    background: transparent;
 }
 
-section[data-testid="stSidebar"] * {
-    color: #F8FAFC !important;
+/* ---------- SIDEBAR ---------- */
+
+[data-testid="stSidebar"] {
+    background: #14263D;
 }
 
-section[data-testid="stSidebar"] hr {
-    border-color: rgba(255,255,255,0.15) !important;
+[data-testid="stSidebar"] * {
+    color: #F8FAFC;
 }
 
-section[data-testid="stSidebar"] .stRadio label {
-    color: #F8FAFC !important;
-}
-
-section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    color: #D8E7F0 !important;
+[data-testid="stSidebar"] hr {
+    border-color: #344A62;
 }
 
 .sidebar-brand {
-    padding: 12px 5px 20px 5px;
+    padding: 10px 5px 20px 5px;
 }
 
-.sidebar-logo {
-    font-size: 38px;
-    margin-bottom: 8px;
+.brand-icon {
+    font-size: 34px;
+    margin-bottom: 10px;
 }
 
-.sidebar-title {
+.brand-name {
     color: #FFFFFF !important;
-    font-size: 28px;
+    font-size: 27px;
     font-weight: 800;
+    margin: 0;
+}
+
+.brand-subtitle {
+    color: #B7C9DC !important;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.sidebar-heading {
+    color: #9FB4CA !important;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Sidebar radio navigation */
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    color: #E8F0F8 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] p {
+    color: #E8F0F8 !important;
+}
+
+/* ---------- HERO ---------- */
+
+.hero {
+    background: linear-gradient(120deg, #14263D 0%, #15536A 55%, #0D9488 100%);
+    padding: 36px 38px;
+    border-radius: 22px;
+    margin-bottom: 24px;
+}
+
+.hero-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.12);
+    color: #D8FFFA !important;
+    border: 1px solid rgba(255,255,255,0.18);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.hero-title {
+    color: #FFFFFF !important;
+    font-size: 34px;
+    font-weight: 800;
+    margin-top: 17px;
+    margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+.hero-description {
+    color: #E0F2FE !important;
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0;
+}
+
+/* ---------- SECTION TITLES ---------- */
+
+.section-title {
+    color: #14263D !important;
+    font-size: 21px;
+    font-weight: 750;
     margin-bottom: 5px;
 }
 
-.sidebar-subtitle {
-    color: #B8D8E7 !important;
+.section-description {
+    color: #64748B !important;
     font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 18px;
 }
 
-/* ================= HERO ================= */
+/* ---------- SUMMARY CARDS ---------- */
 
-.hero {
-    background: linear-gradient(120deg, #12243A, #164E63, #0D9488);
-    padding: 38px;
-    border-radius: 24px;
-    margin-bottom: 25px;
-    box-shadow: 0 12px 35px rgba(15,50,75,0.12);
-}
-
-.hero-tag {
-    display: inline-block;
-    background: rgba(255,255,255,0.13);
-    border: 1px solid rgba(255,255,255,0.20);
-    padding: 7px 12px;
-    border-radius: 20px;
-    color: #FFFFFF !important;
-    font-size: 12px;
-    margin-bottom: 15px;
-}
-
-.hero h1 {
-    color: #FFFFFF !important;
-    font-size: 35px !important;
-    font-weight: 800 !important;
-    margin-bottom: 10px !important;
-}
-
-.hero p {
-    color: #D7F5F0 !important;
-    font-size: 15px !important;
-}
-
-/* ================= METRIC CARDS ================= */
-
-.metric-card {
-    background: #FFFFFF !important;
-    border: 1px solid #E4EAF1;
-    border-radius: 18px;
-    padding: 22px;
-    box-shadow: 0 4px 16px rgba(18,36,58,0.035);
+.summary-card {
+    background: #FFFFFF;
+    border: 1px solid #E4EAF2;
+    border-radius: 16px;
+    padding: 20px;
     min-height: 115px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.025);
 }
 
-.metric-label {
+.summary-label {
     color: #64748B !important;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
 }
 
-.metric-value {
-    color: #12243A !important;
-    font-size: 23px;
-    font-weight: 800;
-    margin-top: 10px;
+.summary-value {
+    color: #14263D !important;
+    font-size: 21px;
+    font-weight: 750;
+    margin-top: 12px;
 }
 
-/* ================= HEADINGS ================= */
+/* ---------- FORM CONTAINER ---------- */
 
-.section-heading {
-    color: #12243A !important;
-    font-size: 23px;
-    font-weight: 800;
-    margin: 10px 0 5px;
+.form-box {
+    background: #FFFFFF;
+    border: 1px solid #E4EAF2;
+    border-radius: 18px;
+    padding: 22px 24px 10px 24px;
+    box-shadow: 0 3px 14px rgba(15,23,42,0.025);
 }
 
-.section-subtitle {
-    color: #64748B !important;
-    font-size: 14px;
-    margin-bottom: 20px;
-}
+/* ---------- INPUT LABELS ---------- */
 
-h1, h2, h3, h4 {
-    color: #12243A !important;
-}
-
-/* ================= INPUT LABELS ================= */
-
-label {
-    color: #243B53 !important;
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label,
+.stNumberInput label {
+    color: #334155 !important;
+    font-size: 13px !important;
     font-weight: 600 !important;
 }
 
-[data-testid="stWidgetLabel"] p {
-    color: #243B53 !important;
-    font-weight: 600 !important;
+/* ---------- INPUT BOXES ---------- */
+
+[data-testid="stNumberInput"] input {
+    color: #14263D !important;
+    -webkit-text-fill-color: #14263D !important;
+    background-color: #FFFFFF !important;
+    font-weight: 500 !important;
 }
 
-/* ================= NUMBER INPUTS ================= */
-
-div[data-baseweb="input"] {
-    background: #FFFFFF !important;
-    border: 1px solid #CBD5E1 !important;
+[data-testid="stNumberInput"] div[data-baseweb="input"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #D7E0EA !important;
     border-radius: 10px !important;
 }
 
-div[data-baseweb="input"] input {
-    color: #12243A !important;
-    background: #FFFFFF !important;
-    -webkit-text-fill-color: #12243A !important;
-}
-
-div[data-baseweb="input"] svg {
-    fill: #52677D !important;
-}
-
-div[data-baseweb="input"]:focus-within {
+[data-testid="stNumberInput"] div[data-baseweb="input"]:focus-within {
     border-color: #0D9488 !important;
-    box-shadow: 0 0 0 2px rgba(13,148,136,0.12) !important;
+    box-shadow: 0 0 0 2px rgba(13,148,136,0.10) !important;
 }
 
-/* ================= BUTTONS ================= */
+[data-testid="stNumberInput"] button {
+    background: #F8FAFC !important;
+}
 
-div.stFormSubmitButton button,
-div.stButton button {
-    background: linear-gradient(90deg, #0D9488, #0F766E) !important;
+[data-testid="stNumberInput"] button svg {
+    fill: #475569 !important;
+}
+
+/* ---------- SUBMIT BUTTON ---------- */
+
+[data-testid="stFormSubmitButton"] button {
+    width: 100%;
+    height: 48px;
+    background: #0D9488 !important;
     color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 12px !important;
-    height: 48px !important;
+    border: 0 !important;
+    border-radius: 11px !important;
     font-weight: 700 !important;
-    transition: 0.2s ease !important;
+    transition: 0.2s ease;
 }
 
-div.stFormSubmitButton button p,
-div.stButton button p {
+[data-testid="stFormSubmitButton"] button:hover {
+    background: #0F766E !important;
+    border: 0 !important;
+    box-shadow: 0 5px 15px rgba(13,148,136,0.15);
+}
+
+[data-testid="stFormSubmitButton"] button p {
     color: #FFFFFF !important;
 }
 
-div.stFormSubmitButton button:hover,
-div.stButton button:hover {
-    background: #115E59 !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 6px 18px rgba(13,148,136,0.20);
-    transform: translateY(-1px);
-}
+/* ---------- RESULT CONTAINERS ---------- */
 
-/* ================= RESULT CARDS ================= */
-
-.result-card {
-    border-radius: 20px;
-    padding: 26px;
+.result-box {
+    border-radius: 17px;
+    padding: 23px;
+    border: 1px solid #E2E8F0;
     background: #FFFFFF;
-    border: 1px solid #E1E8F0;
-    box-shadow: 0 5px 22px rgba(18,36,58,0.04);
+    min-height: 180px;
 }
 
-.result-positive {
-    background: #FFF7F2 !important;
-    border: 1px solid #FED7AA !important;
-    border-left: 5px solid #EA580C !important;
+.result-class-zero {
+    background: #F0FDFA;
+    border: 1px solid #99F6E4;
 }
 
-.result-negative {
-    background: #F0FDFA !important;
-    border: 1px solid #99F6E4 !important;
-    border-left: 5px solid #0D9488 !important;
+.result-class-one {
+    background: #FFF7ED;
+    border: 1px solid #FED7AA;
 }
 
-.result-title {
+.result-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    color: #64748B !important;
+}
+
+.result-heading {
     font-size: 23px;
     font-weight: 800;
-    margin-bottom: 8px;
+    margin-top: 12px;
+    margin-bottom: 10px;
 }
 
-.result-description {
+.result-text {
+    font-size: 13px;
     color: #475569 !important;
-    font-size: 14px;
     line-height: 1.7;
 }
 
-/* ================= STREAMLIT METRICS ================= */
+/* ---------- METRICS ---------- */
 
 [data-testid="stMetric"] {
-    background: #FFFFFF !important;
-    border: 1px solid #E5ECF3 !important;
-    padding: 18px !important;
-    border-radius: 14px !important;
+    background: #FFFFFF;
+    border: 1px solid #E4EAF2;
+    border-radius: 14px;
+    padding: 17px 18px;
 }
 
 [data-testid="stMetricLabel"] {
     color: #64748B !important;
 }
 
-[data-testid="stMetricLabel"] * {
+[data-testid="stMetricLabel"] p {
     color: #64748B !important;
 }
 
 [data-testid="stMetricValue"] {
-    color: #12243A !important;
+    color: #14263D !important;
 }
 
-[data-testid="stMetricValue"] * {
-    color: #12243A !important;
+[data-testid="stMetricValue"] div {
+    color: #14263D !important;
 }
 
-/* ================= EXPANDER FIX ================= */
+/* ---------- EXPANDER ---------- */
 
 [data-testid="stExpander"] {
     background: #FFFFFF !important;
-    border: 1px solid #DCE5EF !important;
-    border-radius: 14px !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 12px !important;
     overflow: hidden !important;
-    margin-top: 12px !important;
+}
+
+[data-testid="stExpander"] summary {
+    padding: 14px 18px !important;
+    background: #FFFFFF !important;
+    color: #14263D !important;
+    min-height: 52px !important;
+}
+
+[data-testid="stExpander"] summary p {
+    color: #14263D !important;
+    font-weight: 650 !important;
+    font-size: 14px !important;
+    margin: 0 !important;
+}
+
+[data-testid="stExpander"] summary svg {
+    color: #0D9488 !important;
+    flex-shrink: 0 !important;
 }
 
 [data-testid="stExpander"] details {
     background: #FFFFFF !important;
 }
 
-[data-testid="stExpander"] summary {
+[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
     background: #FFFFFF !important;
-    color: #12243A !important;
-    padding: 16px 20px !important;
-    min-height: 55px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
-
-[data-testid="stExpander"] summary p {
-    color: #12243A !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    margin: 0 !important;
-    line-height: 1.5 !important;
-}
-
-[data-testid="stExpander"] summary svg {
-    color: #0D9488 !important;
-    fill: #0D9488 !important;
-    flex-shrink: 0 !important;
-}
-
-[data-testid="stExpander"] summary:hover {
-    background: #F0FDFA !important;
-}
-
-[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {
-    background: #FFFFFF !important;
-    padding: 15px !important;
     border-top: 1px solid #E5EAF0 !important;
+    padding: 15px !important;
 }
 
-/* ================= CLEAN INPUT TABLE ================= */
+/* ---------- DATAFRAME ---------- */
 
-.input-table {
-    width: 100%;
-    border-collapse: collapse;
-    border-radius: 12px;
+[data-testid="stDataFrame"] {
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
     overflow: hidden;
-    background: #FFFFFF;
 }
 
-.input-table th {
-    background: #EAF2F8;
-    color: #12243A;
-    font-weight: 700;
-    padding: 13px;
-    text-align: left;
-    border: 1px solid #DCE5EF;
-    font-size: 13px;
-}
-
-.input-table td {
-    background: #FFFFFF;
-    color: #12243A;
-    padding: 13px;
-    border: 1px solid #E5EAF0;
-    font-size: 14px;
-}
-
-.input-table tr:nth-child(even) td {
-    background: #F8FAFC;
-}
-
-/* ================= INFO / WARNING ================= */
+/* ---------- ALERTS ---------- */
 
 [data-testid="stAlert"] {
-    background: #EFF6FF !important;
-    border: 1px solid #BFDBFE !important;
     border-radius: 12px !important;
 }
 
 [data-testid="stAlert"] p {
-    color: #1E3A8A !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
+    line-height: 1.65 !important;
 }
 
-[data-testid="stAlert"] svg {
-    color: #2563EB !important;
-}
-
-/* ================= PROGRESS BAR ================= */
-
-[data-testid="stProgressBar"] > div > div {
-    background-color: #0D9488 !important;
-}
-
-/* ================= FOOTER ================= */
+/* ---------- FOOTER ---------- */
 
 .footer {
     text-align: center;
-    color: #8492A6 !important;
-    font-size: 12px;
-    padding: 25px 0 10px;
+    color: #94A3B8 !important;
+    font-size: 11px;
     line-height: 1.8;
+    padding-top: 25px;
 }
 
-/* ================= RESPONSIVE ================= */
+/* ---------- RESPONSIVE ---------- */
 
 @media (max-width: 768px) {
-    .hero {
-        padding: 25px;
-    }
-
-    .hero h1 {
-        font-size: 27px !important;
-    }
-
-    .metric-value {
-        font-size: 19px;
-    }
 
     .block-container {
-        padding: 1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-top: 1rem;
+    }
+
+    .hero {
+        padding: 24px;
+        border-radius: 17px;
+    }
+
+    .hero-title {
+        font-size: 26px;
+    }
+
+    .summary-value {
+        font-size: 18px;
+    }
+
+    .form-box {
+        padding: 15px;
     }
 }
+
 </style>
 """, unsafe_allow_html=True)
 
 
-# ============================================================
-# LOAD MODEL
-# ============================================================
+# ==========================================================
+# 3. LOAD MODEL
+# ==========================================================
 
 @st.cache_resource
 def load_model():
-    return joblib.load("diabetes_model.pkl")
+
+    model = joblib.load("diabetes_model.pkl")
+
+    return model
 
 
 try:
     model = load_model()
     model_loaded = True
 
-except Exception as e:
+except Exception as error:
+    model = None
     model_loaded = False
-    st.error("Model loading failed. Please check diabetes_model.pkl.")
-    st.exception(e)
 
 
-# ============================================================
-# SIDEBAR
-# ============================================================
+# ==========================================================
+# 4. SIDEBAR
+# ==========================================================
 
 with st.sidebar:
 
     st.markdown("""
     <div class="sidebar-brand">
-        <div class="sidebar-logo">🩺</div>
-        <div class="sidebar-title">MediPredict AI</div>
-        <div class="sidebar-subtitle">Intelligent Health Analytics</div>
+        <div class="brand-icon">🩺</div>
+        <p class="brand-name">MediPredict</p>
+        <p class="brand-subtitle">Machine Learning Health Analytics</p>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
 
+    st.markdown(
+        '<p class="sidebar-heading">NAVIGATION</p>',
+        unsafe_allow_html=True
+    )
+
     page = st.radio(
-        "NAVIGATION",
-        ["Dashboard", "About Project"]
+        "Navigation",
+        ["Dashboard", "About Project"],
+        label_visibility="collapsed"
     )
 
     st.divider()
 
-    st.markdown("### MODEL OVERVIEW")
+    st.markdown(
+        '<p class="sidebar-heading">MODEL INFORMATION</p>',
+        unsafe_allow_html=True
+    )
 
     st.markdown("""
     **Algorithm**
 
     Decision Tree Classifier
 
-    **Model Type**
+    **Prediction Type**
 
     Binary Classification
 
-    **Input Features**
+    **Input Parameters**
 
-    8 Parameters
+    8 Features
     """)
 
     st.divider()
 
     if model_loaded:
-
-        st.markdown("""
-        <div style="background:rgba(255,255,255,.08);
-        padding:13px;border-radius:12px;">
-            <p style="font-size:12px;color:#D5E7F0 !important;">
-                PROJECT STATUS
-            </p>
-            <p style="color:#5EEAD4 !important;font-weight:700;">
-                ● Model Loaded Successfully
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
+        st.success("Model loaded successfully")
     else:
+        st.error("Model file not found")
 
-        st.warning("Model unavailable")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    st.caption("Machine Learning Project · 2026")
+    st.caption("Educational ML Project")
 
 
-# ============================================================
-# HERO SECTION
-# ============================================================
+# ==========================================================
+# 5. HERO HEADER
+# ==========================================================
 
 st.markdown("""
 <div class="hero">
-    <div class="hero-tag">
-        ✦ MACHINE LEARNING · HEALTH ANALYTICS
-    </div>
 
-    <h1>Diabetes Prediction Dashboard</h1>
+    <span class="hero-badge">
+        MACHINE LEARNING PROJECT
+    </span>
 
-    <p>
-        Explore a machine learning classification demonstration
-        powered by a trained Decision Tree model.
+    <h1 class="hero-title">
+        Diabetes Prediction Dashboard
+    </h1>
+
+    <p class="hero-description">
+        A clean interactive interface for exploring a Decision Tree
+        classification model using eight input parameters.
     </p>
+
 </div>
 """, unsafe_allow_html=True)
 
 
-# ============================================================
-# DASHBOARD
-# ============================================================
+# ==========================================================
+# 6. DASHBOARD PAGE
+# ==========================================================
 
 if page == "Dashboard":
 
-    # ---------------- METRIC CARDS ----------------
+    # ---------- SUMMARY CARDS ----------
 
-    m1, m2, m3 = st.columns(3)
+    card1, card2, card3 = st.columns(3, gap="medium")
 
-    with m1:
+    with card1:
         st.markdown("""
-        <div class="metric-card">
-            <div class="metric-label">MODEL ALGORITHM</div>
-            <div class="metric-value">Decision Tree</div>
+        <div class="summary-card">
+            <div class="summary-label">MODEL ALGORITHM</div>
+            <div class="summary-value">Decision Tree</div>
         </div>
         """, unsafe_allow_html=True)
 
-    with m2:
+    with card2:
         st.markdown("""
-        <div class="metric-card">
-            <div class="metric-label">INPUT FEATURES</div>
-            <div class="metric-value">08 Parameters</div>
+        <div class="summary-card">
+            <div class="summary-label">INPUT FEATURES</div>
+            <div class="summary-value">8 Parameters</div>
         </div>
         """, unsafe_allow_html=True)
 
-    with m3:
+    with card3:
         st.markdown("""
-        <div class="metric-card">
-            <div class="metric-label">CLASSIFICATION</div>
-            <div class="metric-value">Binary Output</div>
+        <div class="summary-card">
+            <div class="summary-label">OUTPUT TYPE</div>
+            <div class="summary-value">Binary Classification</div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.write("")
 
-    # ---------------- INPUT SECTION ----------------
+    # ---------- INPUT SECTION ----------
+
+    st.markdown(
+        '<div class="section-title">Input Parameters</div>',
+        unsafe_allow_html=True
+    )
 
     st.markdown("""
-    <div class="section-heading">Patient Input Parameters</div>
-
-    <div class="section-subtitle">
-        Enter the parameters below to generate a model prediction.
+    <div class="section-description">
+        Enter the values below to explore the trained model's output.
     </div>
     """, unsafe_allow_html=True)
 
     if model_loaded:
 
-        with st.form("prediction_form"):
+        with st.form("diabetes_prediction_form"):
 
-            col1, col2 = st.columns(2, gap="large")
+            # Two equal columns
+            left_column, right_column = st.columns(
+                2,
+                gap="large"
+            )
 
-            # -------- COLUMN 1 --------
+            # ---------- LEFT COLUMN ----------
 
-            with col1:
+            with left_column:
 
-                st.markdown("#### 🧬 General Parameters")
+                st.markdown("#### General Parameters")
 
                 pregnancies = st.number_input(
                     "Pregnancies",
@@ -618,11 +610,11 @@ if page == "Dashboard":
                     step=1.0
                 )
 
-            # -------- COLUMN 2 --------
+            # ---------- RIGHT COLUMN ----------
 
-            with col2:
+            with right_column:
 
-                st.markdown("#### 🩺 Additional Parameters")
+                st.markdown("#### Additional Parameters")
 
                 insulin = st.number_input(
                     "Insulin",
@@ -640,12 +632,13 @@ if page == "Dashboard":
                     step=0.1
                 )
 
-                dpf = st.number_input(
+                diabetes_pedigree = st.number_input(
                     "Diabetes Pedigree Function",
                     min_value=0.0,
                     max_value=3.0,
                     value=0.50,
-                    step=0.01
+                    step=0.01,
+                    format="%.2f"
                 )
 
                 age = st.number_input(
@@ -656,77 +649,111 @@ if page == "Dashboard":
                     step=1
                 )
 
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.write("")
 
-            submitted = st.form_submit_button(
-                "✦  Generate Prediction",
+            submit = st.form_submit_button(
+                "Generate Prediction",
                 use_container_width=True
             )
 
-        # ====================================================
-        # PREDICTION
-        # ====================================================
+        # ==================================================
+        # 7. PREDICTION RESULT
+        # ==================================================
 
-        if submitted:
+        if submit:
 
-            input_data = pd.DataFrame([{
-                "Pregnancies": pregnancies,
-                "Glucose": glucose,
-                "BloodPressure": blood_pressure,
-                "SkinThickness": skin_thickness,
-                "Insulin": insulin,
-                "BMI": bmi,
-                "DiabetesPedigreeFunction": dpf,
-                "Age": age
-            }])
+            # Maintain the exact feature order used during training
+            feature_names = [
+                "Pregnancies",
+                "Glucose",
+                "BloodPressure",
+                "SkinThickness",
+                "Insulin",
+                "BMI",
+                "DiabetesPedigreeFunction",
+                "Age"
+            ]
+
+            input_data = pd.DataFrame(
+                [[
+                    pregnancies,
+                    glucose,
+                    blood_pressure,
+                    skin_thickness,
+                    insulin,
+                    bmi,
+                    diabetes_pedigree,
+                    age
+                ]],
+                columns=feature_names
+            )
 
             try:
 
                 prediction = model.predict(input_data)[0]
 
-                probabilities = model.predict_proba(input_data)[0]
+                # Safely handle model probability support
+                probability_available = hasattr(model, "predict_proba")
 
-                class_0_probability = float(probabilities[0])
-                class_1_probability = float(probabilities[1])
+                if probability_available:
 
-                # ---------------- RESULTS ----------------
+                    probability_values = model.predict_proba(input_data)[0]
 
-                st.markdown("<br>", unsafe_allow_html=True)
+                    model_classes = list(model.classes_)
+
+                    probability_map = {
+                        model_classes[i]: float(probability_values[i])
+                        for i in range(len(model_classes))
+                    }
+
+                    probability_0 = probability_map.get(0, 0.0)
+                    probability_1 = probability_map.get(1, 0.0)
+
+                else:
+
+                    probability_0 = None
+                    probability_1 = None
+
+                st.write("")
+
+                st.markdown(
+                    '<div class="section-title">Prediction Results</div>',
+                    unsafe_allow_html=True
+                )
 
                 st.markdown("""
-                <div class="section-heading">Prediction Analysis</div>
-
-                <div class="section-subtitle">
-                    Model output based on the entered parameters.
+                <div class="section-description">
+                    Results generated by the trained classification model.
                 </div>
                 """, unsafe_allow_html=True)
 
+                # ---------- PREDICTION CARD ----------
+
                 result_col, probability_col = st.columns(
-                    [1.2, 1],
+                    [1.15, 1],
                     gap="large"
                 )
 
-                # -------- RESULT CARD --------
-
                 with result_col:
 
-                    if prediction == 1:
+                    if prediction == 0:
 
                         st.markdown("""
-                        <div class="result-card result-positive">
+                        <div class="result-box result-class-zero">
 
-                            <div style="font-size:30px;">📊</div>
-
-                            <div class="result-title"
-                            style="color:#9A3412 !important;">
-                                Model Output: Class 1
+                            <div class="result-label">
+                                MODEL CLASSIFICATION
                             </div>
 
-                            <p class="result-description">
-                                The model classified this input into Class 1.
-                                This is an educational prediction and is
-                                not a medical diagnosis.
-                            </p>
+                            <div class="result-heading"
+                            style="color:#0F766E !important;">
+                                Class 0
+                            </div>
+
+                            <div class="result-text">
+                                The model predicted Class 0 for the
+                                supplied input parameters.
+                            </div>
 
                         </div>
                         """, unsafe_allow_html=True)
@@ -734,188 +761,228 @@ if page == "Dashboard":
                     else:
 
                         st.markdown("""
-                        <div class="result-card result-negative">
+                        <div class="result-box result-class-one">
 
-                            <div style="font-size:30px;">📊</div>
-
-                            <div class="result-title"
-                            style="color:#115E59 !important;">
-                                Model Output: Class 0
+                            <div class="result-label">
+                                MODEL CLASSIFICATION
                             </div>
 
-                            <p class="result-description">
-                                The model classified this input into Class 0.
-                                This is an educational prediction and is
-                                not a medical diagnosis.
-                            </p>
+                            <div class="result-heading"
+                            style="color:#C2410C !important;">
+                                Class 1
+                            </div>
+
+                            <div class="result-text">
+                                The model predicted Class 1 for the
+                                supplied input parameters.
+                            </div>
 
                         </div>
                         """, unsafe_allow_html=True)
 
-                # -------- PROBABILITY CARD --------
+                # ---------- PROBABILITY CARD ----------
 
                 with probability_col:
 
-                    st.markdown("""
-                    <div class="result-card">
-                        <div style="font-weight:700;
-                        font-size:17px;color:#12243A !important;">
-                            Model Probability
-                        </div>
+                    if probability_available:
 
-                        <p style="color:#64748B !important;
-                        font-size:13px;">
-                            Probability assigned to Class 1
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        st.metric(
+                            "Class 1 Probability",
+                            f"{probability_1 * 100:.2f}%"
+                        )
 
-                    st.metric(
-                        "Class 1 Probability",
-                        f"{class_1_probability * 100:.2f}%"
-                    )
+                        st.progress(
+                            min(max(probability_1, 0.0), 1.0)
+                        )
 
-                    st.progress(class_1_probability)
+                        st.caption(
+                            "Model output probability for Class 1."
+                        )
 
-                    st.caption(
-                        "Model-estimated probability, not actual medical risk."
-                    )
+                    else:
 
-                # -------- PROBABILITY METRICS --------
+                        st.warning(
+                            "Probability output is unavailable "
+                            "for this model."
+                        )
 
-                st.markdown("<br>", unsafe_allow_html=True)
+                # ---------- PROBABILITY BREAKDOWN ----------
 
-                p1, p2 = st.columns(2)
+                if probability_available:
 
-                with p1:
+                    st.write("")
 
-                    st.metric(
-                        "Class 0 Probability",
-                        f"{class_0_probability * 100:.2f}%"
-                    )
+                    prob_col1, prob_col2 = st.columns(2)
 
-                with p2:
+                    with prob_col1:
 
-                    st.metric(
-                        "Class 1 Probability",
-                        f"{class_1_probability * 100:.2f}%"
-                    )
+                        st.metric(
+                            "Class 0 Probability",
+                            f"{probability_0 * 100:.2f}%"
+                        )
 
-                # -------- INPUT DATA TABLE --------
+                    with prob_col2:
+
+                        st.metric(
+                            "Class 1 Probability",
+                            f"{probability_1 * 100:.2f}%"
+                        )
+
+                # ---------- INPUT SUMMARY ----------
 
                 with st.expander(
-                    "📋 View Input Parameters",
+                    "View Input Parameters",
                     expanded=False
                 ):
 
-                    st.markdown(
-                        input_data.to_html(
-                            index=False,
-                            classes="input-table",
-                            border=0
-                        ),
-                        unsafe_allow_html=True
+                    st.dataframe(
+                        input_data,
+                        use_container_width=True,
+                        hide_index=True
                     )
 
-                # -------- DISCLAIMER --------
+                # ---------- DISCLAIMER ----------
 
                 st.info(
-                    "Educational ML demonstration only. "
-                    "Do not use this output for diagnosis or treatment decisions."
+                    "Educational machine learning demonstration only. "
+                    "This model is not a medical diagnostic tool. "
+                    "Predictions should not be used for medical decisions."
                 )
 
-            except Exception as e:
+            except Exception as error:
 
-                st.error("Prediction failed. Please check your input values.")
-                st.exception(e)
+                st.error(
+                    "Prediction error. Please verify your model "
+                    "and input feature configuration."
+                )
+
+                st.exception(error)
 
 
-# ============================================================
-# ABOUT PROJECT
-# ============================================================
+# ==========================================================
+# 8. ABOUT PROJECT PAGE
+# ==========================================================
 
 elif page == "About Project":
 
+    st.markdown(
+        '<div class="section-title">About MediPredict</div>',
+        unsafe_allow_html=True
+    )
+
     st.markdown("""
-    <div class="result-card">
+    <div class="section-description">
+        An educational Machine Learning project demonstrating
+        binary classification using a Decision Tree algorithm.
+    </div>
+    """, unsafe_allow_html=True)
 
-        <h2 style="color:#12243A !important;">
-            About MediPredict AI
-        </h2>
+    st.markdown("""
+    <div class="summary-card">
 
-        <p style="color:#475569 !important;line-height:1.8;">
-            MediPredict is an educational Machine Learning project
-            demonstrating binary classification using a Decision
-            Tree model trained with a diabetes dataset.
-        </p>
+        <div class="summary-label">PROJECT OVERVIEW</div>
+
+        <div class="result-text" style="margin-top:15px;">
+            MediPredict is a machine learning demonstration application
+            that accepts eight numerical input features and generates
+            a classification result from a trained Decision Tree model.
+            The interface is developed using Streamlit.
+        </div>
 
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.write("")
+
+    st.markdown(
+        '<div class="section-title">Project Workflow</div>',
+        unsafe_allow_html=True
+    )
+
+    workflow = [
+        "Load the diabetes dataset",
+        "Inspect and clean the data",
+        "Handle missing values",
+        "Split the dataset into training and testing sets",
+        "Train the Decision Tree classifier",
+        "Evaluate model performance",
+        "Build the Streamlit web interface",
+        "Generate predictions from user inputs"
+    ]
+
+    for i, step in enumerate(workflow, start=1):
+
+        st.markdown(f"**{i}.** {step}")
+
+    st.write("")
+
+    st.markdown(
+        '<div class="section-title">Technology Stack</div>',
+        unsafe_allow_html=True
+    )
+
+    tech1, tech2, tech3 = st.columns(3)
+
+    with tech1:
+
+        st.markdown("""
+        <div class="summary-card">
+            <div class="summary-value">Python</div>
+            <div class="summary-label">Programming</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with tech2:
+
+        st.markdown("""
+        <div class="summary-card">
+            <div class="summary-value">Scikit-learn</div>
+            <div class="summary-label">Machine Learning</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with tech3:
+
+        st.markdown("""
+        <div class="summary-card">
+            <div class="summary-value">Streamlit</div>
+            <div class="summary-label">Web Application</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("")
+
+    st.markdown(
+        '<div class="section-title">Model Information</div>',
+        unsafe_allow_html=True
+    )
 
     st.markdown("""
-    <div class="section-heading">Project Workflow</div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    1. Dataset loading using Pandas
-    2. Data cleaning and preprocessing
-    3. Missing value handling
-    4. Train/test split
-    5. Decision Tree model training
-    6. Prediction and evaluation
-    7. Web application deployment
+    - **Algorithm:** Decision Tree Classifier
+    - **Problem Type:** Binary Classification
+    - **Input:** 8 numerical features
+    - **Output:** Class 0 or Class 1
+    - **Dataset:** Diabetes dataset
     """)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="section-heading">Technology Stack</div>
-    """, unsafe_allow_html=True)
-
-    t1, t2, t3 = st.columns(3)
-
-    with t1:
-
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">Python</div>
-            <div class="metric-label">Programming Language</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with t2:
-
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">Scikit-learn</div>
-            <div class="metric-label">Machine Learning</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with t3:
-
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">Streamlit</div>
-            <div class="metric-label">Web Framework</div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.warning(
+        "This project is designed for learning and demonstration. "
+        "It is not clinically validated."
+    )
 
 
-# ============================================================
-# FOOTER
-# ============================================================
+# ==========================================================
+# 9. FOOTER
+# ==========================================================
 
 st.markdown("""
 <div class="footer">
 
-    MEDIPREDICT AI · HEALTH ANALYTICS DASHBOARD
+    MEDIPREDICT · MACHINE LEARNING PROJECT
 
-    <br><br>
+    <br>
 
-    EDUCATIONAL PROJECT · NOT A MEDICAL DIAGNOSTIC TOOL
+    EDUCATIONAL DEMONSTRATION · NOT FOR MEDICAL USE
 
 </div>
 """, unsafe_allow_html=True)
